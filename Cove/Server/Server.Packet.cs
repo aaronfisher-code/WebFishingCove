@@ -30,7 +30,7 @@ namespace Cove.Server
                 if (!hideJoinMessage)
                 {
                     messagePlayer("This is a Cove dedicated server!", packet.SteamId);
-                    messagePlayer("Please report any issues to the github (xr0.xyz/cove)", packet.SteamId);
+                    messagePlayer("To improve FPS and reduce lag on the server, please install the Antilag mod.", packet.SteamId);
                 }
 
                 Dictionary<string, object> hostPacket = new();
