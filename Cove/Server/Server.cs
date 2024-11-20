@@ -272,7 +272,7 @@ namespace Cove.Server
                     if (isPlayerBanned(userChanged))
                     {
                         Console.WriteLine($"{Username} is banned and will be kicked from the lobby.");
-                        SteamMatchmaking.KickPlayerFromLobby(lobbyID, userChanged);
+                        SteamNetworking.CloseP2PSessionWithUser(userChanged);
                         return;
                     }
 
