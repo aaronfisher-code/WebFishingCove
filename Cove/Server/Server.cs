@@ -210,12 +210,18 @@ namespace Cove.Server
             Callback<LobbyCreated_t>.Create((LobbyCreated_t param) =>
             {
                 SteamLobby = new CSteamID(param.m_ulSteamIDLobby);
+    
+                // Read banned players from file and set as lobby data
+                string fileDir = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
+                string[] bannedPlayers = File.ReadAllLines(fileDir);
+                string bannedPlayersList = string.Join(",", bannedPlayers.Select(line => line.Split('#')[0].Trim()));
+                
+                SteamMatchmaking.SetLobbyData(SteamLobby, "banned_players", bannedPlayersList);
                 SteamMatchmaking.SetLobbyData(SteamLobby, "ref", "webfishing_gamelobby");
                 SteamMatchmaking.SetLobbyData(SteamLobby, "version", WebFishingGameVersion);
                 SteamMatchmaking.SetLobbyData(SteamLobby, "code", LobbyCode);
                 SteamMatchmaking.SetLobbyData(SteamLobby, "type", codeOnly ? "code_only" : "public");
                 SteamMatchmaking.SetLobbyData(SteamLobby, "public", "true");
-                SteamMatchmaking.SetLobbyData(SteamLobby, "banned_players", "");
                 SteamMatchmaking.SetLobbyData(SteamLobby, "age_limit", ageRestricted ? "true" : "false");
                 SteamMatchmaking.SetLobbyData(SteamLobby, "cap", MaxPlayers.ToString());
                 SteamNetworking.AllowP2PPacketRelay(false);
@@ -227,6 +233,26 @@ namespace Cove.Server
                 Console.ResetColor();
                 // set the player count in the title
                 updatePlayercount();
+            });
+
+            Callback<GameLobbyJoinRequested_t>.Create((GameLobbyJoinRequested_t param) => 
+            {
+                if (isPlayerBanned(param.m_steamIDFriend))
+                {
+                    // Reject the join attempt immediately
+                    SteamMatchmaking.LeaveLobby(param.m_steamIDLobby);
+                    return;
+                }
+            });
+
+            Callback<LobbyEnter_t>.Create((LobbyEnter_t param) =>
+            {
+                CSteamID playerID = SteamUser.GetSteamID();
+                if (isPlayerBanned(playerID))
+                {
+                    SteamMatchmaking.LeaveLobby(new CSteamID(param.m_ulSteamIDLobby));
+                    return;
+                }
             });
 
             Callback<LobbyChatUpdate_t>.Create((LobbyChatUpdate_t param) =>
@@ -241,24 +267,24 @@ namespace Cove.Server
                 if (stateChange.HasFlag(EChatMemberStateChange.k_EChatMemberStateChangeEntered))
                 {
                     string Username = SteamFriends.GetFriendPersonaName(userChanged);
+                    Console.WriteLine($"{Username} [{userChanged.m_SteamID}] has attempted to join the game!");
 
-                    Console.WriteLine($"{Username} [{userChanged.m_SteamID}] has joined the game!");
+                    if (isPlayerBanned(userChanged))
+                    {
+                        Console.WriteLine($"{Username} is banned and will be kicked from the lobby.");
+                        SteamMatchmaking.KickPlayerFromLobby(lobbyID, userChanged);
+                        return;
+                    }
+
+                    // Proceed to add the player if they're not banned
                     updatePlayercount();
-
                     WFPlayer newPlayer = new WFPlayer(userChanged, Username);
                     AllPlayers.Add(newPlayer);
-
-                    //Console.WriteLine($"{Username} has been assigned the fisherID: {newPlayer.FisherID}");
 
                     foreach (PluginInstance plugin in loadedPlugins)
                     {
                         plugin.plugin.onPlayerJoin(newPlayer);
                     }
-
-                    // check if the player is banned
-                    if (isPlayerBanned(userChanged))
-                        sendBlacklistPacketToAll(userChanged.m_SteamID.ToString()); // tell all players to blacklist the banned player
-
                 }
 
                 if (stateChange.HasFlag(EChatMemberStateChange.k_EChatMemberStateChangeLeft) || stateChange.HasFlag(EChatMemberStateChange.k_EChatMemberStateChangeDisconnected))
