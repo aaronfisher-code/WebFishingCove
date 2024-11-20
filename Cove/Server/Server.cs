@@ -267,7 +267,7 @@ namespace Cove.Server
                 if (stateChange.HasFlag(EChatMemberStateChange.k_EChatMemberStateChangeEntered))
                 {
                     string Username = SteamFriends.GetFriendPersonaName(userChanged);
-                    Console.WriteLine($"{Username} [{userChanged.m_SteamID}] has attempted to join the game!");
+                    Console.WriteLine($"{Username} [{userChanged.m_SteamID}] has joined the game!");
 
                     if (isPlayerBanned(userChanged))
                     {
