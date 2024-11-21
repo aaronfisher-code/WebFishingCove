@@ -42,11 +42,14 @@ namespace Cove.Server
                         {
                             messagePlayer("You're an admin on this server!", sender);
                         }
-                        /*
-                        if (isPlayerBanned(packet.SteamId))
-                            banPlayer(packet.SteamId);
-                        */
-                        //spawnServerPlayerActor(packet.SteamId);
+
+                        // send the player all the canvas data
+                        foreach (Chalk.ChalkCanvas canvas in chalkCanvas)
+                        {
+                            var chalkPacket = new Dictionary<string, object> { { "type", "chalk_packet" }, { "canvas_id", canvas.canvasID }, { "data", canvas.getChalkPacket() } };
+                            sendPacketToPlayer(chalkPacket, sender);
+                        }
+
                     }
                     break;
 
@@ -138,6 +141,23 @@ namespace Cove.Server
                     {
                         sendPlayerAllServerActors(sender);
                         sendPacketToPlayer(createRequestActorResponce(), sender); // this is empty because otherwise all the server actors are invisible!
+                    }
+                    break;
+
+                case "chalk_packet":
+                    {
+                        long canvasID = (long)packetInfo["canvas_id"];
+                        Chalk.ChalkCanvas canvas = chalkCanvas.Find(c => c.canvasID == canvasID);
+                        
+                        if (canvas == null)
+                        {
+                            Console.WriteLine("Creating new canvas");
+                            canvas = new Chalk.ChalkCanvas(canvasID);
+                            chalkCanvas.Add(canvas);
+                        }
+
+                        canvas.chalkUpdate((Dictionary<int, object>)packetInfo["data"]);
+
                     }
                     break;
             }
