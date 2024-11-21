@@ -263,8 +263,10 @@ namespace Cove.Server
                     }
 
                     // check if the player is banned
-                    if (isPlayerBanned(userChanged))
+                    if (isPlayerBanned(userChanged)){
                         sendBlacklistPacketToAll(userChanged.m_SteamID.ToString()); // tell all players to blacklist the banned player
+                        messageGlobal("[System] "+ Username + " is banned, all their traffic is now being blocked. Skill Issue.","#ac0029");
+                    }
 
                     if (userChanged.m_SteamID == SteamUser.GetSteamID().m_SteamID)
                     {
